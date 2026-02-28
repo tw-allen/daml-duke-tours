@@ -1,0 +1,138 @@
+{
+  "buildings": [
+    {
+      "id": "perkins_library",
+      "name": "Perkins Library",
+      "official_name": "William R. Perkins Library",
+      "category": "academic",
+      "campus": "West Campus",
+      "official_url": "https://library.duke.edu",
+      "static_facts": {
+        "primary_function": "Main academic library",
+        "connects_to": ["Bostock Library", "Rubenstein Rare Book & Manuscript Library"],
+        "architecture_style": "Collegiate Gothic",
+        "notable_features": [
+          "Large study spaces",
+          "Research support services",
+          "Popular late-night study location"
+        ]
+      },
+      "dynamic_fields": {
+        "status": null,
+        "recent_updates": null
+      }
+    },
+
+    {
+      "id": "broadhead_center",
+      "name": "Broadhead Center",
+      "official_name": "The Brodhead Center",
+      "aliases": ["West Union", "WU"],
+      "category": "dining_student_life",
+      "campus": "West Campus",
+      "official_url": "https://students.duke.edu/living/dining/dining-locations/",
+      "static_facts": {
+        "primary_function": "Main dining and student gathering space",
+        "renovation_year": 2016,
+        "notable_features": [
+          "Multiple dining vendors",
+          "Central social hub",
+          "Popularly known as West Union"
+        ]
+      },
+      "dynamic_fields": {
+        "status": null,
+        "vendor_changes": null
+      }
+    },
+
+    {
+      "id": "duke_chapel",
+      "name": "Duke Chapel",
+      "official_name": "Duke University Chapel",
+      "category": "landmark_religious",
+      "campus": "West Campus",
+      "official_url": "https://chapel.duke.edu",
+      "static_facts": {
+        "primary_function": "Interdenominational Christian chapel and university landmark",
+        "year_completed": 1935,
+        "architecture_style": "Gothic",
+        "notable_features": [
+          "210-foot tower",
+          "Stained glass windows",
+          "Host to major university events"
+        ]
+      },
+      "dynamic_fields": {
+        "status": null,
+        "event_highlights": null
+      }
+    },
+
+    {
+      "id": "bryan_center",
+      "name": "Bryan Center",
+      "official_name": "Bryan University Center",
+      "category": "student_life",
+      "campus": "West Campus",
+      "official_url": "https://maps.duke.edu/?focus=96",
+      "static_facts": {
+        "primary_function": "Student activity and event space",
+        "notable_features": [
+          "Home to student organization offices",
+          "Meeting rooms and event spaces",
+          "Near Duke Chapel and Broadhead Center"
+        ]
+      },
+      "dynamic_fields": {
+        "status": null,
+        "renovations": null
+      }
+    },
+
+    {
+      "id": "wilson_recreation_center",
+      "name": "Wilson Recreation Center",
+      "official_name": "Wilson Recreation Center",
+      "aliases": ["Wilson"],
+      "category": "recreation",
+      "campus": "West Campus",
+      "official_url": "https://recreation.duke.edu",
+      "static_facts": {
+        "primary_function": "Campus recreation and fitness facility",
+        "notable_features": [
+          "Gym facilities",
+          "Indoor track",
+          "Group fitness classes",
+          "Swimming pool"
+        ]
+      },
+      "dynamic_fields": {
+        "status": null,
+        "facility_updates": null
+      }
+    },
+
+    {
+      "id": "wilkinson_building",
+      "name": "Wilkinson Building",
+      "official_name": "Wilkinson Building",
+      "category": "academic",
+      "campus": "West Campus",
+      "official_url": "https://www.bcj.com/projects/academic/duke-university-pratt-school-of-engineering-building/",
+      "static_facts": {
+        "primary_function": "Academic and research space for the Pratt School of Engineering",
+        "notable_features": [
+            "Flexible teaching laboratories",
+            "Collaborative learning spaces",
+            "Faculty offices and research areas",
+            "Designed to support interdisciplinary engineering education"
+            ]
+      },
+      "dynamic_fields": {
+        "status": null,
+        "department_changes": null
+      }
+    }
+  ]
+}
