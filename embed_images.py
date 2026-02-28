@@ -5,11 +5,11 @@ from transformers import CLIPProcessor, CLIPModel
 import psycopg2
 from pgvector.psycopg2 import register_vector
 
-# Load CLIP
+# Loading CLIP
 model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
-# Map folder names to building IDs in your DB
+# Mapping folder names to building IDs in the Database
 BUILDING_MAP = {
     "perkins":    1,
     "chapel":     2,
@@ -19,7 +19,7 @@ BUILDING_MAP = {
     "wu":         6,
 }
 
-# Connect to Postgres
+# Connecting to Postgres
 conn = psycopg2.connect("postgresql://postgres:password@localhost:5432/postgres")
 register_vector(conn)
 cur = conn.cursor()
