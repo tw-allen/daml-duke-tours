@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -35,6 +36,7 @@ app = FastAPI()
 # ----------------------------
 class BuildingRequest(BaseModel):
     building_id: str
+    tour_type: Optional[str] = None
 
 # ----------------------------
 # Load Building Data
@@ -63,8 +65,18 @@ def build_simple_blurb(building):
 # ----------------------------
 # LLM Blurb Generator
 # ----------------------------
-def generate_llm_blurb(building):
+def generate_llm_blurb(building, tour_type: Optional[str] = None):
     facts = building.get("static_facts", {})
+
+    # Tour-type customization
+    if tour_type == "first_year":
+        tour_context = "Focus on practical and student-life relevant details for new students."
+    elif tour_type == "prospective_student":
+        tour_context = "Highlight impressive aspects and academic strengths to excite prospective students."
+    elif tour_type == "history":
+        tour_context = "Emphasize architectural style, year built, and historical significance."
+    else:
+        tour_context = "Provide a general engaging campus tour description."
 
     prompt = f"""
 You are an AI campus tour guide for Duke University.
@@ -72,19 +84,23 @@ You are an AI campus tour guide for Duke University.
 Using ONLY the factual information provided below,
 write a concise 2–4 sentence engaging building description.
 
+{tour_context}
+
 Building Name: {building['name']}
 Campus: {building['campus']}
 Primary Function: {facts.get('primary_function', '')}
 Notable Features: {", ".join(facts.get('notable_features', []))}
 
-Do not invent facts.
-Keep it friendly, informative, and suitable for a campus tour.
+Rules:
+- Do not invent facts.
+- Do not add external knowledge.
+- Keep it friendly and audio-tour ready.
 """
 
     response = client.chat.completions.create(
         model="gpt-5-nano",
         messages=[
-            {"role": "system", "content": "You are a helpful Duke campus tour guide."},
+            {"role": "system", "content": "You are a professional Duke campus tour guide."},
             {"role": "user", "content": prompt}
         ],
         temperature=0.3
@@ -105,24 +121,28 @@ def generate_blurb(request: BuildingRequest):
     if not building:
         raise HTTPException(status_code=404, detail="Building not found")
 
-    # Check cache first
-    if request.building_id in blurb_cache:
+    # Cache key now includes tour_type
+    cache_key = f"{request.building_id}:{request.tour_type}"
+
+    if cache_key in blurb_cache:
         return {
             "building_id": request.building_id,
-            "blurb": blurb_cache[request.building_id],
+            "tour_type": request.tour_type,
+            "blurb": blurb_cache[cache_key],
             "cached": True
         }
 
     try:
-        blurb = generate_llm_blurb(building)
+        blurb = generate_llm_blurb(building, request.tour_type)
     except Exception as e:
         print("LLM Error:", e)
         blurb = build_simple_blurb(building)
 
-    blurb_cache[request.building_id] = blurb
+    blurb_cache[cache_key] = blurb
 
     return {
         "building_id": building["id"],
+        "tour_type": request.tour_type,
         "blurb": blurb,
         "cached": False
     }
