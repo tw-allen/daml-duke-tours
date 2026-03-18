@@ -1,12 +1,14 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Navigation, Compass } from "lucide-react";
+import { Navigation, Camera } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const MapView = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
@@ -15,11 +17,17 @@ const MapView = () => {
     const map = L.map(mapRef.current, {
       zoomControl: false,
       attributionControl: false,
-    }).setView([48.8566, 2.3522], 13); // Paris default
+    }).setView([36.0014, -78.9382], 18); // Duke University default
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
+
+    // ask for user location immediately
+    map.locate({
+      setView: true,
+      maxZoom: 18,
+    });
 
     // Add a pulsing marker via CSS class
     const icon = L.divIcon({
@@ -29,7 +37,7 @@ const MapView = () => {
       iconAnchor: [10, 10],
     });
 
-    const marker = L.marker([48.8566, 2.3522], { icon }).addTo(map);
+    const marker = L.marker([36.0014, -78.9382], { icon }).addTo(map);
     markerRef.current = marker;
 
     map.on("locationfound", (e: L.LocationEvent) => {
@@ -49,14 +57,16 @@ const MapView = () => {
   const handleLocate = () => {
     const map = mapInstanceRef.current;
     if (!map) return;
-    map.locate({ watch: true, setView: true, maxZoom: 16 });
+    map.locate({ watch: true, setView: true, maxZoom: 18 });
   };
 
+  {/*
   const handleResetNorth = () => {
     const map = mapInstanceRef.current;
     if (!map) return;
     map.setView(map.getCenter(), map.getZoom());
   };
+  */}
 
   return (
     <div className="relative w-full h-full">
@@ -71,10 +81,10 @@ const MapView = () => {
           <Navigation className="w-4 h-4" />
         </button>
         <button
-          onClick={handleResetNorth}
+          onClick={() => navigate("/camera")}
           className="w-10 h-10 rounded-lg bg-card shadow-md flex items-center justify-center text-foreground hover:bg-secondary transition-colors"
         >
-          <Compass className="w-4 h-4" />
+          <Camera className="w-4 h-4" />
         </button>
       </div>
     </div>
