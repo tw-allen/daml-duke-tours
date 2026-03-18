@@ -32,6 +32,12 @@ if DUKE_API_KEY:
 # ----------------------------
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # ----------------------------
 # Request Model
 # ----------------------------
