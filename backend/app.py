@@ -25,7 +25,7 @@ client = None
 if DUKE_API_KEY:
     client = OpenAI(
         api_key=DUKE_API_KEY,
-        base_url="https://litellm.oit.duke.edu/v1"
+        base_url="https://litellm.oit.duke.edu/v1")
 
 # ----------------------------
 # FastAPI App
