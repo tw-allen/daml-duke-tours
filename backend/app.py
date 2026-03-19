@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from openai import OpenAI
+from fastapi.middleware.cors import CORSMiddleware
+
 
 # ----------------------------
 # Load Environment Variables
@@ -14,23 +16,30 @@ load_dotenv()
 DUKE_API_KEY = os.getenv("DUKE_AI_API_KEY")
 
 if not DUKE_API_KEY:
-    raise ValueError("DUKE_AI_API_KEY not found. Check your .env file.")
+    print("Warning: DUKE_AI_API_KEY not found. Falling back to simple blurbs.")
 
 blurb_cache = {}
 
 # ----------------------------
 # Duke AI Gateway Client Setup
 # ----------------------------
-client = OpenAI(
-    api_key=DUKE_API_KEY,
-    base_url="https://litellm.oit.duke.edu/v1"
-)
+client = None
+if DUKE_API_KEY:
+    client = OpenAI(
+        api_key=DUKE_API_KEY,
+        base_url="https://litellm.oit.duke.edu/v1")
 
 # ----------------------------
 # FastAPI App
 # ----------------------------
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # ----------------------------
 # Request Model
 # ----------------------------
@@ -66,6 +75,8 @@ def build_simple_blurb(building):
 # LLM Blurb Generator
 # ----------------------------
 def generate_llm_blurb(building, tour_type: Optional[str] = None):
+    if not client:
+        raise Exception("No API key available")
     facts = building.get("static_facts", {})
 
     # Tour-type customization

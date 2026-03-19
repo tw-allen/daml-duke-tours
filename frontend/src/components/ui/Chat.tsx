@@ -10,10 +10,32 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-    const bottomRef = useRef<HTMLDivElement | null>(null);
-    useEffect(() => {
+  useEffect(() => {
+    // Check immediately on mount
+    const blurb = localStorage.getItem("pending_blurb");
+    if (blurb) {
+      setMessages([{ role: "assistant", content: blurb }]);
+      localStorage.removeItem("pending_blurb");
+    }
+
+    // Also listen for changes while mounted
+    const handleStorage = () => {
+      const blurb = localStorage.getItem("pending_blurb");
+      if (blurb) {
+        setMessages([{ role: "assistant", content: blurb }]);
+        localStorage.removeItem("pending_blurb");
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
+  }, [messages]);
+
   const sendMessage = async () => {
     if (!input.trim()) return;
 
@@ -62,7 +84,7 @@ export default function Chat() {
             {msg.content}
           </div>
         ))}
-        {loading && <div className="    ext-sm text-gray-400">Typing...</div>}
+        {loading && <div className="text-sm text-gray-400">Typing...</div>}
         <div ref={bottomRef} />
       </div>
 
