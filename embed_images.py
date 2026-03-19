@@ -14,7 +14,7 @@ BUILDING_MAP = {
     "perkins":    1,
     "chapel":     2,
     "bryan":      3,
-    "wilson":     4,
+    "wilson_gym":     4,
     "wilkinson":  5,
     "wu":         6,
 }
