@@ -58,6 +58,18 @@ app.add_middleware(
 class BuildingRequest(BaseModel):
     building_id: str
 
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class BuildingChatRequest(BaseModel):
+    building_id: str
+    message: str
+    history: list[ChatMessage] = []
+    current_blurb: Optional[str] = None
+
 # ----------------------------
 # Database Helpers
 # ----------------------------
@@ -443,6 +455,164 @@ Rules:
         },
     }
 
+
+def get_building_context(building: dict) -> dict:
+    facts = building.get("static_facts", {})
+    official_url = building.get("official_url")
+    filtered_web_context = ""
+    extracted_web_facts = ""
+    researched_facts = ""
+
+    if official_url:
+        try:
+            page_text = extract_webpage_text(official_url)
+            filtered_web_context = filter_relevant_web_context(building, page_text)
+            if not is_generic_page_context(building, filtered_web_context):
+                extracted_web_facts = extract_web_facts(
+                    building,
+                    filtered_web_context,
+                    cache_key=official_url,
+                )
+        except Exception as e:
+            print("Web Retrieval Error:", e)
+
+    try:
+        researched_facts = research_building_with_web_search(building)
+    except Exception as e:
+        print("Research Error:", e)
+
+    return {
+        "primary_function": facts.get("primary_function", ""),
+        "architecture_style": facts.get("architecture_style", ""),
+        "notable_features": facts.get("notable_features", []),
+        "description": building.get("description", ""),
+        "official_url": official_url,
+        "filtered_web_context": filtered_web_context,
+        "extracted_web_facts": extracted_web_facts,
+        "researched_facts": researched_facts,
+    }
+
+
+def answer_building_question(
+    building: dict,
+    question: str,
+    history: list[ChatMessage],
+    current_blurb: Optional[str] = None,
+) -> str:
+    if not client:
+        raise Exception("No API key available")
+
+    context = get_building_context(building)
+    serialized_history = "\n".join(
+        f"{message.role.title()}: {message.content}" for message in history[-6:]
+    )
+    already_known_facts = ""
+
+    if current_blurb:
+        try:
+            already_known_facts = identify_known_facts(building, current_blurb)
+        except Exception as e:
+            print("Known Facts Error:", e)
+
+    prompt = f"""
+You are an interactive Duke University campus tour guide answering follow-up questions about one building.
+
+Answer the user's question in 1 short paragraph.
+Be conversational, direct, and helpful.
+
+Building context:
+- Building Name: {building['name']}
+- Official Name: {building.get('official_name') or ''}
+- Campus: {building.get('campus', '')}
+- Primary Function: {context['primary_function']}
+- Architecture Style: {context['architecture_style']}
+- Notable Features: {", ".join(context['notable_features'])}
+- Existing Description: {context['description'] or 'None'}
+- Extracted Web Facts: {context['extracted_web_facts'] or 'None'}
+- Additional Researched Facts: {context['researched_facts'] or 'None'}
+
+Recent conversation:
+{serialized_history or 'None'}
+
+Current building blurb already shown to the user:
+{current_blurb or 'None'}
+
+Facts already covered in that blurb:
+{already_known_facts or 'None'}
+
+User question:
+{question}
+
+Rules:
+- Answer only using the building context above.
+- If the answer is not supported well by the context, say that plainly instead of guessing.
+- Prefer concrete facts over generic language.
+- Default to 2 concise sentences, and use a third only if it adds clearly new value.
+- Keep the answer under about 75 words unless the user explicitly asks for more detail.
+- Treat the current building blurb as information the user already knows.
+- Do not restate facts from the current building blurb unless the user explicitly asks for a recap, summary, or clarification.
+- Treat the "Facts already covered in that blurb" list as off-limits unless the user is clearly asking for those details again.
+- Prefer details that are new, more specific, or deeper than the current building blurb.
+- If the user asks a broad question and there is little meaningful new information beyond the current blurb, say so briefly and then offer 1 or 2 additional details at most.
+- If the user asks a broad question like "What makes this place notable?", focus on 1 or 2 distinctive details rather than summarizing everything.
+- Use prior conversation to avoid repeating points that were already covered unless the user asks for a recap or clarification.
+- Do not cite URLs or mention sources unless the user explicitly asks where the information came from.
+- If the question compares this building to another place and the context is insufficient, say what you can and note the limitation.
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-5-nano",
+        messages=[
+            {"role": "system", "content": "You are a grounded Duke campus tour guide."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.3,
+    )
+
+    return response.choices[0].message.content.strip()
+
+
+def identify_known_facts(building: dict, current_blurb: str) -> str:
+    if not client or not current_blurb:
+        return ""
+
+    context = get_building_context(building)
+    response = client.chat.completions.create(
+        model="gpt-5-nano",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "Identify which building facts are already stated in the provided blurb. "
+                    "Return 3 to 6 short bullet points. Only include facts explicitly or clearly "
+                    "implied by the blurb. If the blurb is too vague, return exactly: None"
+                ),
+            },
+            {
+                "role": "user",
+                "content": f"""
+Building: {building['name']}
+Known building context:
+- Primary Function: {context['primary_function']}
+- Architecture Style: {context['architecture_style']}
+- Notable Features: {", ".join(context['notable_features'])}
+- Existing Description: {context['description'] or 'None'}
+- Extracted Web Facts: {context['extracted_web_facts'] or 'None'}
+- Additional Researched Facts: {context['researched_facts'] or 'None'}
+
+Current blurb:
+{current_blurb}
+""",
+            },
+        ],
+        temperature=0.1,
+    )
+
+    known_facts = response.choices[0].message.content.strip()
+    if known_facts.lower() == "none":
+        return ""
+    return known_facts
+
 # ----------------------------
 # API Endpoint
 # ----------------------------
@@ -498,4 +668,35 @@ def generate_blurb(request: BuildingRequest):
         "source": source,
         "debug": debug,
         "cached": False
+    }
+
+
+@app.post("/chat-about-building")
+def chat_about_building(request: BuildingChatRequest):
+    try:
+        building = fetch_building(request.building_id)
+    except Exception as e:
+        print("Database Error:", e)
+        raise HTTPException(status_code=500, detail="Unable to load building data")
+
+    if not building:
+        raise HTTPException(status_code=404, detail="Building not found")
+
+    if not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message is required")
+
+    try:
+        reply = answer_building_question(
+            building,
+            request.message,
+            request.history,
+            request.current_blurb,
+        )
+    except Exception as e:
+        print("Chat Error:", e)
+        raise HTTPException(status_code=500, detail="Unable to answer building question")
+
+    return {
+        "building_id": building["id"],
+        "reply": reply,
     }
