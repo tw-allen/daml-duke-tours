@@ -6,6 +6,8 @@
       "official_name": "William R. Perkins Library",
       "category": "academic",
       "campus": "West Campus",
+      "lat": 36.0022,
+      "lng": -78.9382,
       "official_url": "https://library.duke.edu",
       "static_facts": {
         "primary_function": "Main academic library",
@@ -30,6 +32,8 @@
       "aliases": ["West Union", "WU"],
       "category": "dining_student_life",
       "campus": "West Campus",
+      "lat": 36.0010,
+      "lng": -78.9393,
       "official_url": "https://students.duke.edu/living/dining/dining-locations/",
       "static_facts": {
         "primary_function": "Main dining and student gathering space",
@@ -52,6 +56,8 @@
       "official_name": "Duke University Chapel",
       "category": "landmark_religious",
       "campus": "West Campus",
+      "lat": 36.0014,
+      "lng": -78.9402,
       "official_url": "https://chapel.duke.edu",
       "static_facts": {
         "primary_function": "Interdenominational Christian chapel and university landmark",
@@ -75,6 +81,8 @@
       "official_name": "Bryan University Center",
       "category": "student_life",
       "campus": "West Campus",
+      "lat": 36.0006,
+      "lng": -78.9412,
       "official_url": "https://maps.duke.edu/?focus=96",
       "static_facts": {
         "primary_function": "Student activity and event space",
@@ -97,6 +105,8 @@
       "aliases": ["Wilson"],
       "category": "recreation",
       "campus": "West Campus",
+      "lat": 35.9996,
+      "lng": -78.9421,
       "official_url": "https://recreation.duke.edu",
       "static_facts": {
         "primary_function": "Campus recreation and fitness facility",
@@ -119,6 +129,8 @@
       "official_name": "Wilkinson Building",
       "category": "academic",
       "campus": "West Campus",
+      "lat": 36.0028,
+      "lng": -78.9418,
       "official_url": "https://www.bcj.com/projects/academic/duke-university-pratt-school-of-engineering-building/",
       "static_facts": {
         "primary_function": "Academic and research space for the Pratt School of Engineering",
