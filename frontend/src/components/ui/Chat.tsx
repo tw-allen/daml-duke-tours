@@ -146,11 +146,14 @@ export default function Chat({ buildingSlug }: Props) {
       }
 
       const data = await res.json();
-      console.log("Chat response:", data);
+      console.log("Raw response text:", await res.clone().text());
+      console.log("Parsed data:", data);
       console.log("data.reply:", data.reply);
       console.log("typeof data.reply:", typeof data.reply);
       
       const replyText = data.reply || "Sorry, I couldn't generate a response.";
+      console.log("Using replyText:", replyText);
+      
       setMessages((prev) => [...prev, { role: "assistant", content: replyText }]);
       // Speak the response if TTS is enabled
       speakText(replyText);
