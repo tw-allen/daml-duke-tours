@@ -147,9 +147,13 @@ export default function Chat({ buildingSlug }: Props) {
 
       const data = await res.json();
       console.log("Chat response:", data);
-      setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
+      console.log("data.reply:", data.reply);
+      console.log("typeof data.reply:", typeof data.reply);
+      
+      const replyText = data.reply || "Sorry, I couldn't generate a response.";
+      setMessages((prev) => [...prev, { role: "assistant", content: replyText }]);
       // Speak the response if TTS is enabled
-      speakText(data.reply);
+      speakText(replyText);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Failed to get response";
       console.error("Chat error details:", err);
