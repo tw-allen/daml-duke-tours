@@ -48,11 +48,41 @@ export default function Chat({ buildingSlug }: Props) {
   }, [messages]);
 
   const speakText = (text: string) => {
-    if (!ttsEnabled || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1;
-    window.speechSynthesis.speak(utterance);
+    if (!ttsEnabled || !("speechSynthesis" in window)) {
+      console.log("TTS skipped - enabled:", ttsEnabled, "supported:", "speechSynthesis" in window);
+      return;
+    }
+    
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      
+      utterance.onstart = () => console.log("TTS started");
+      utterance.onend = () => console.log("TTS ended");
+      utterance.onerror = (event) => console.error("TTS error:", event.error);
+      
+      // Get available voices with retry logic
+      let voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) {
+        // Wait for voices to load
+        window.speechSynthesis.onvoiceschanged = () => {
+          voices = window.speechSynthesis.getVoices();
+          if (voices.length > 0) {
+            utterance.voice = voices[0];
+          }
+        };
+      } else {
+        utterance.voice = voices[0];
+      }
+      
+      console.log("TTS speaking:", text.substring(0, 50), "... voices:", voices.length);
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.error("TTS error:", err);
+    }
   };
 
   const sendMessage = async () => {
