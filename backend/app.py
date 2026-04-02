@@ -70,6 +70,11 @@ class BuildingChatRequest(BaseModel):
     history: list[ChatMessage] = []
     current_blurb: Optional[str] = None
 
+
+class GenericChatRequest(BaseModel):
+    message: str
+    history: list[ChatMessage] = []
+
 # ----------------------------
 # Database Helpers
 # ----------------------------
@@ -616,6 +621,42 @@ Current blurb:
 # ----------------------------
 # API Endpoint
 # ----------------------------
+@app.post("/chat")
+def generic_chat(request: GenericChatRequest):
+    if not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message is required")
+
+    if not client:
+        raise HTTPException(status_code=503, detail="Chat backend unavailable: missing API key")
+
+    # Keep request history limited to avoid token issues.
+    history = request.history[-12:]
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a friendly Duke campus tour assistant. "
+                "Keep answers concise and helpful."
+            ),
+        }
+    ]
+    messages.extend({"role": m.role, "content": m.content} for m in history)
+    messages.append({"role": "user", "content": request.message})
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-5-nano",
+            messages=messages,
+            temperature=0.4,
+        )
+        reply = response.choices[0].message.content.strip()
+    except Exception as e:
+        print("Generic chat error:", e)
+        raise HTTPException(status_code=500, detail="Unable to process chat message")
+
+    return {"reply": reply}
+
+
 @app.post("/generate-building-blurb")
 def generate_blurb(request: BuildingRequest):
     try:
