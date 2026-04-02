@@ -48,40 +48,46 @@ export default function Chat({ buildingSlug }: Props) {
   }, [messages]);
 
   const speakText = (text: string) => {
-    if (!ttsEnabled || !("speechSynthesis" in window)) {
-      console.log("TTS skipped - enabled:", ttsEnabled, "supported:", "speechSynthesis" in window);
+    console.log("speakText called with:", text?.substring(0, 50), "...");
+    console.log("ttsEnabled:", ttsEnabled);
+    console.log("speechSynthesis supported:", "speechSynthesis" in window);
+    
+    if (!ttsEnabled) {
+      console.log("TTS disabled by user");
+      return;
+    }
+    
+    if (!("speechSynthesis" in window)) {
+      console.log("Speech synthesis not supported in this browser");
       return;
     }
     
     try {
+      // Cancel any ongoing speech
       window.speechSynthesis.cancel();
+      
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1;
       utterance.pitch = 1;
       utterance.volume = 1;
       
-      utterance.onstart = () => console.log("TTS started");
-      utterance.onend = () => console.log("TTS ended");
-      utterance.onerror = (event) => console.error("TTS error:", event.error);
-      
-      // Get available voices with retry logic
+      // Get voices
       let voices = window.speechSynthesis.getVoices();
-      if (voices.length === 0) {
-        // Wait for voices to load
-        window.speechSynthesis.onvoiceschanged = () => {
-          voices = window.speechSynthesis.getVoices();
-          if (voices.length > 0) {
-            utterance.voice = voices[0];
-          }
-        };
-      } else {
+      console.log("Available voices:", voices.length);
+      
+      if (voices.length > 0) {
         utterance.voice = voices[0];
+        console.log("Using voice:", voices[0].name);
       }
       
-      console.log("TTS speaking:", text.substring(0, 50), "... voices:", voices.length);
+      utterance.onstart = () => console.log("TTS: Speech started");
+      utterance.onend = () => console.log("TTS: Speech ended");
+      utterance.onerror = (event) => console.error("TTS: Speech error:", event.error);
+      
+      console.log("TTS: About to speak");
       window.speechSynthesis.speak(utterance);
     } catch (err) {
-      console.error("TTS error:", err);
+      console.error("TTS: Exception:", err);
     }
   };
 
