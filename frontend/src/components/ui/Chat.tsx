@@ -58,12 +58,6 @@ export default function Chat({ buildingSlug }: Props) {
   const sendMessage = async () => {
     if (!input.trim()) return;
 
-    // For now, require a building selection since /chat endpoint isn't deployed yet
-    if (!buildingSlug) {
-      setError("Please select a building first to chat. Generic chat coming soon!");
-      return;
-    }
-
     const userMessage: Message = { role: "user", content: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
@@ -71,13 +65,26 @@ export default function Chat({ buildingSlug }: Props) {
     setError(null);
 
     try {
-      const endpoint = "/chat-about-building";
-      const body = {
-        building_id: buildingSlug,
-        message: userMessage.content,
-        history: messages,
-        current_blurb: blurbRef.current,
-      };
+      let endpoint: string;
+      let body: any;
+
+      if (buildingSlug) {
+        // Use building-specific chat if a building is selected
+        endpoint = "/chat-about-building";
+        body = {
+          building_id: buildingSlug,
+          message: userMessage.content,
+          history: messages,
+          current_blurb: blurbRef.current,
+        };
+      } else {
+        // Use generic chat endpoint
+        endpoint = "/chat";
+        body = {
+          message: userMessage.content,
+          history: messages,
+        };
+      }
 
       const url = `${API_BASE}${endpoint}`;
       console.log("Fetching:", url, "Body:", body);
