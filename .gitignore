@@ -5,6 +5,8 @@ images/
 # Ignore environment variables
 .env
 
+test_images/
+
 # Python cache
 __pycache__/
 *.pyc
