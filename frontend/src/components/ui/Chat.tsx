@@ -12,6 +12,63 @@ type Props = {
   buildingSlug: string | null;
 };
 
+// Strip bullet markers and collapse into plain text for TTS.
+// This keeps TTS word indices in sync with what FormattedMessage displays.
+function cleanForSpeech(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => line.replace(/^\s*-\s+/, ""))
+    .filter((line) => line.trim())
+    .join(" ");
+}
+
+// Render assistant text with bullet formatting + optional per-word TTS highlighting.
+function FormattedMessage({ text, activeWordIdx = -1 }: { text: string; activeWordIdx?: number }) {
+  const lines = text.split("\n");
+  let globalIdx = 0;
+
+  return (
+    <>
+      {lines.map((line, li) => {
+        const bulletMatch = line.match(/^\s*-\s+(.*)/);
+        const content = bulletMatch ? bulletMatch[1] : line;
+        if (!content.trim()) return null;
+
+        const words = content.trim().split(/\s+/);
+        const wordSpans = words.map((word, wi) => {
+          const idx = globalIdx++;
+          const active = activeWordIdx >= 0 && idx === activeWordIdx;
+          return (
+            <span
+              key={wi}
+              style={{
+                marginRight: "0.28em",
+                color: active ? "#2563eb" : "inherit",
+                fontWeight: active ? 600 : undefined,
+                transition: "color 0.1s",
+              }}
+            >
+              {word}
+            </span>
+          );
+        });
+
+        if (bulletMatch) {
+          return (
+            <div key={li} style={{ display: "flex", gap: "0.5em", marginTop: "0.3em" }}>
+              <span style={{ color: "#2563eb", fontWeight: 700, flexShrink: 0 }}>•</span>
+              <span>{wordSpans}</span>
+            </div>
+          );
+        }
+        return (
+          <p key={li} style={{ marginTop: li === 0 ? 0 : "0.4em" }}>{wordSpans}</p>
+        );
+      })}
+    </>
+  );
+}
+
 export default function Chat({ buildingSlug }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -80,8 +137,10 @@ export default function Chat({ buildingSlug }: Props) {
     setSpeakingContent(text);
     setWordIdx(-1);
 
+    // Use cleaned text for TTS so word indices match FormattedMessage's word count
+    const speechText = cleanForSpeech(text);
     let count = 0;
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(speechText);
     // Use the stamp so callbacks can detect staleness
     (utterance as any).__stamp = stamp;
     activeUtterance.current = utterance;
@@ -236,7 +295,6 @@ export default function Chat({ buildingSlug }: Props) {
         )}
         {messages.map((msg, i) => {
           const isSpeaking = msg.role === "assistant" && msg.content === speakingContent;
-          const words = isSpeaking ? msg.content.trim().split(/\s+/) : [];
           return (
             <div
               key={i}
@@ -246,25 +304,10 @@ export default function Chat({ buildingSlug }: Props) {
                   : "bg-gray-200 text-black self-start"
               }`}
             >
-              {isSpeaking ? (
-                <span>
-                  {words.map((word, wi) => (
-                    <span
-                      key={wi}
-                      style={{
-                        marginRight: "0.28em",
-                        color: wi === wordIdx ? "#2563eb" : "inherit",
-                        fontWeight: wi === wordIdx ? 600 : undefined,
-                        transition: "color 0.1s",
-                      }}
-                    >
-                      {word}
-                    </span>
-                  ))}
-                </span>
-              ) : (
-                msg.content
-              )}
+              <FormattedMessage
+                text={msg.content}
+                activeWordIdx={isSpeaking ? wordIdx : -1}
+              />
             </div>
           );
         })}
