@@ -57,7 +57,7 @@ const Camera = () => {
     formData.append("file", blob, "photo.jpg");
 
     try {
-      const res = await fetch("http://localhost:8000/identify-building", {
+      const res = await fetch("https://daml-duke-tours-fibm.onrender.com/identify-building", {
         method: "POST",
         body: formData,
       });
