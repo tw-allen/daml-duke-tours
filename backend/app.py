@@ -1,16 +1,28 @@
 import os
+<<<<<<< HEAD
 import re
+=======
+import io
+>>>>>>> 1b59f51f (added image upload and building identification)
 from typing import Optional
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from pydantic import BaseModel
 from openai import OpenAI
 from fastapi.middleware.cors import CORSMiddleware
+<<<<<<< HEAD
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import requests
 from bs4 import BeautifulSoup
 
+=======
+import numpy as np
+from PIL import Image as PILImage
+from transformers import CLIPProcessor, CLIPModel
+import psycopg2
+from pgvector.psycopg2 import register_vector
+>>>>>>> 1b59f51f (added image upload and building identification)
 
 # ----------------------------
 # Load Environment Variables
@@ -42,6 +54,20 @@ if DUKE_API_KEY:
         base_url="https://litellm.oit.duke.edu/v1")
 
 # ----------------------------
+# CLIP Setup
+# ----------------------------
+print("Loading CLIP model...")
+clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+print("CLIP model loaded.")
+
+# ----------------------------
+# Database Setup
+# ----------------------------
+db_conn = psycopg2.connect("postgresql://postgres:password@localhost:5433/postgres")
+register_vector(db_conn)
+
+# ----------------------------
 # FastAPI App
 # ----------------------------
 app = FastAPI()
@@ -52,6 +78,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 # ----------------------------
 # Request Model
 # ----------------------------
@@ -382,6 +409,7 @@ def generate_llm_blurb(building):
     extracted_web_facts = ""
     researched_facts = ""
 
+<<<<<<< HEAD
     if official_url:
         try:
             webpage_text = extract_webpage_text(official_url)
@@ -399,6 +427,16 @@ def generate_llm_blurb(building):
         researched_facts = research_building_with_web_search(building)
     except Exception as e:
         print("Research Error:", e)
+=======
+    if tour_type == "first_year":
+        tour_context = "Focus on practical and student-life relevant details for new students."
+    elif tour_type == "prospective_student":
+        tour_context = "Highlight impressive aspects and academic strengths to excite prospective students."
+    elif tour_type == "history":
+        tour_context = "Emphasize architectural style, year built, and historical significance."
+    else:
+        tour_context = "Provide a general engaging campus tour description."
+>>>>>>> 1b59f51f (added image upload and building identification)
 
     prompt = f"""
 You are writing a short spoken blurb for a Duke University campus tour.
@@ -619,7 +657,7 @@ Current blurb:
     return known_facts
 
 # ----------------------------
-# API Endpoint
+# Blurb Endpoint
 # ----------------------------
 @app.post("/chat")
 def generic_chat(request: GenericChatRequest):
@@ -668,7 +706,11 @@ def generate_blurb(request: BuildingRequest):
     if not building:
         raise HTTPException(status_code=404, detail="Building not found")
 
+<<<<<<< HEAD
     cache_key = request.building_id
+=======
+    cache_key = f"{request.building_id}:{request.tour_type}"
+>>>>>>> 1b59f51f (added image upload and building identification)
 
     if cache_key in blurb_cache:
         return {
@@ -711,6 +753,7 @@ def generate_blurb(request: BuildingRequest):
         "cached": False
     }
 
+<<<<<<< HEAD
 
 @app.post("/chat-about-building")
 def chat_about_building(request: BuildingChatRequest):
@@ -741,3 +784,47 @@ def chat_about_building(request: BuildingChatRequest):
         "building_id": building["id"],
         "reply": reply,
     }
+=======
+# ----------------------------
+# Image Recognition Endpoint
+# ----------------------------
+@app.post("/identify-building")
+async def identify_building(file: UploadFile = File(...)):
+    contents = await file.read()
+    image = PILImage.open(io.BytesIO(contents)).convert("RGB")
+
+    inputs = clip_processor(images=image, return_tensors="pt")
+    outputs = clip_model.vision_model(**inputs)
+    vector = clip_model.visual_projection(outputs.pooler_output).detach().numpy()[0]
+
+    cur = db_conn.cursor()
+    cur.execute("""
+        SELECT b.id, b.name, 1 - (bi.embedding_vector <=> %s::vector) AS similarity
+        FROM Building_images bi
+        JOIN Buildings b ON b.id = bi.building_id
+        ORDER BY bi.embedding_vector <=> %s::vector
+        LIMIT 1
+    """, (vector, vector))
+
+    result = cur.fetchone()
+    cur.close()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="No buildings in database")
+
+    ID_TO_SLUG = {
+        1: "perkins_library",
+        2: "duke_chapel",
+        3: "bryan_center",
+        4: "wilson_recreation_center",
+        5: "wilkinson_building",
+        6: "broadhead_center",
+    }
+
+    return {
+        "building_id": result[0],
+        "building_slug": ID_TO_SLUG.get(result[0], str(result[0])),
+        "building_name": result[1],
+        "similarity": float(result[2])
+    }
+>>>>>>> 1b59f51f (added image upload and building identification)
