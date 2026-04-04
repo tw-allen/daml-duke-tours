@@ -83,7 +83,6 @@ const Camera = () => {
       });
 
       const data = await res.json();
-<<<<<<< HEAD
       console.log("Backend response:", data); // add this
 
 
@@ -91,9 +90,6 @@ const Camera = () => {
     localStorage.setItem("pending_blurb", data.blurb);
     localStorage.setItem("pending_slug", selectedBuilding); 
       console.log("Saved to localStorage:", data.blurb); // add this
-=======
-      localStorage.setItem("pending_blurb", data.blurb);
->>>>>>> 1b59f51f (added image upload and building identification)
       navigate("/");
     } catch (err) {
       console.error("Error fetching blurb:", err);
