@@ -17,6 +17,7 @@ const Camera = () => {
   const navigate = useNavigate();
   const [photo, setPhoto] = useState<string | null>(null);
   const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null);
+  const [predictedBuilding, setPredictedBuilding] = useState<{ id: string; name: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -39,7 +40,7 @@ const Camera = () => {
     };
   }, []);
 
-  const handleCapture = () => {
+  const handleCapture = async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
@@ -47,7 +48,27 @@ const Camera = () => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext("2d")?.drawImage(video, 0, 0);
-    setPhoto(canvas.toDataURL("image/jpeg"));
+    const dataUrl = canvas.toDataURL("image/jpeg");
+    setPhoto(dataUrl);
+    setLoading(true);
+
+    const blob = await (await fetch(dataUrl)).blob();
+    const formData = new FormData();
+    formData.append("file", blob, "photo.jpg");
+
+    try {
+      const res = await fetch("http://localhost:8000/identify-building", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      setPredictedBuilding({ id: String(data.building_id), name: data.building_name });
+      setSelectedBuilding(data.building_slug);
+    } catch (err) {
+      console.error("Recognition error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGetBlurb = async () => {
@@ -62,6 +83,7 @@ const Camera = () => {
       });
 
       const data = await res.json();
+<<<<<<< HEAD
       console.log("Backend response:", data); // add this
 
 
@@ -69,6 +91,9 @@ const Camera = () => {
     localStorage.setItem("pending_blurb", data.blurb);
     localStorage.setItem("pending_slug", selectedBuilding); 
       console.log("Saved to localStorage:", data.blurb); // add this
+=======
+      localStorage.setItem("pending_blurb", data.blurb);
+>>>>>>> 1b59f51f (added image upload and building identification)
       navigate("/");
     } catch (err) {
       console.error("Error fetching blurb:", err);
@@ -111,38 +136,31 @@ const Camera = () => {
         </button>
       )}
 
-      {/* Building selector + blurb button */}
+      {/* Bottom panel */}
       {photo && (
         <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl p-4 flex flex-col gap-3">
-          <p className="text-sm font-semibold text-foreground">Which building is this?</p>
-          <div className="flex flex-col gap-2">
-            {BUILDINGS.map((b) => (
-              <button
-                key={b.id}
-                onClick={() => setSelectedBuilding(b.id)}
-                className={`text-sm px-4 py-2 rounded-lg border transition-colors ${
-                  selectedBuilding === b.id
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-secondary text-foreground border-border"
-                }`}
-              >
-                {b.name}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={handleGetBlurb}
-            disabled={!selectedBuilding || loading}
-            className="bg-primary text-primary-foreground rounded-lg py-2 text-sm font-semibold disabled:opacity-50"
-          >
-            {loading ? "Loading..." : "Get Tour Info"}
-          </button>
-          <button
-            onClick={() => setPhoto(null)}
-            className="text-sm text-muted-foreground text-center"
-          >
-            Retake photo
-          </button>
+          {loading ? (
+            <p className="text-sm text-center text-foreground">Identifying building...</p>
+          ) : (
+            <>
+            <p className="text-sm font-semibold text-foreground">
+              Detected: {predictedBuilding?.name ?? "Unknown"}
+            </p>
+            <button
+              onClick={handleGetBlurb}
+              disabled={!selectedBuilding || loading}
+              className="bg-primary text-primary-foreground rounded-lg py-2 text-sm font-semibold disabled:opacity-50"
+            >
+              {loading ? "Loading..." : "Get Tour Info"}
+            </button>
+            <button
+              onClick={() => { setPhoto(null); setPredictedBuilding(null); setSelectedBuilding(null); }}
+              className="text-sm text-muted-foreground text-center"
+            >
+              Retake photo
+            </button>
+            </>
+          )}
         </div>
       )}
     </div>
