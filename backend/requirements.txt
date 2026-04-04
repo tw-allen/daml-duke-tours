@@ -3,11 +3,9 @@ uvicorn
 openai
 pydantic
 python-dotenv
-<<<<<<< HEAD
 psycopg2-binary
 requests
 beautifulsoup4
-=======
 transformers
 torch
 pillow
@@ -15,4 +13,3 @@ pgvector
 psycopg2-binary
 numpy
 python-multipart
->>>>>>> 1b59f51f (added image upload and building identification)
