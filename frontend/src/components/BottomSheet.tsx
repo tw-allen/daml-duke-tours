@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { MapPin, Navigation } from "lucide-react";
+import { Navigation } from "lucide-react";
 import Chat from "./ui/Chat";
 import { calculateDistance, calculateWalkingTime, getUserLocation, metersToMiles } from "../lib/location";
 
@@ -161,11 +161,6 @@ const BottomSheet = () => {
         className="flex-1 px-4 pb-4 min-h-0"
         style={{ overflowY: isFullScreen ? "auto" : "hidden" }}
       >
-        {/* Search bar */}
-        <div className="bg-secondary rounded-xl px-4 py-3 flex items-center gap-3 mb-4">
-          <MapPin className="w-4 h-4 text-primary shrink-0" />
-          <span className="text-muted-foreground text-sm">Search a place to explore...</span>
-        </div>
 
         {/* Nearest Building Info */}
         {nearestBuilding && (
