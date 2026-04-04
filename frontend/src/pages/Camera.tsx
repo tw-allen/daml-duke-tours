@@ -55,7 +55,7 @@ const Camera = () => {
     setLoading(true);
 
     try {
-      const res = await fetch("https://daml-duke-tours.onrender.com/generate-building-blurb", {
+      const res = await fetch("https://daml-duke-tours-fibm.onrender.com/generate-building-blurb", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ building_id: selectedBuilding }),
@@ -66,7 +66,8 @@ const Camera = () => {
 
 
       // Save blurb to localStorage so Chat can pick it up
-      localStorage.setItem("pending_blurb", data.blurb);
+    localStorage.setItem("pending_blurb", data.blurb);
+    localStorage.setItem("pending_slug", selectedBuilding); 
       console.log("Saved to localStorage:", data.blurb); // add this
       navigate("/");
     } catch (err) {
