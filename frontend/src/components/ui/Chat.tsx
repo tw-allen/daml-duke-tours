@@ -12,8 +12,6 @@ type Props = {
   buildingSlug: string | null;
 };
 
-// Strip bullet markers and collapse into plain text for TTS.
-// This keeps TTS word indices in sync with what FormattedMessage displays.
 function cleanForSpeech(text: string): string {
   return text
     .split("\n")
@@ -22,7 +20,6 @@ function cleanForSpeech(text: string): string {
     .join(" ");
 }
 
-// Render assistant text with bullet formatting + optional per-word TTS highlighting.
 function FormattedMessage({ text, activeWordIdx = -1 }: { text: string; activeWordIdx?: number }) {
   const lines = text.split("\n");
   let globalIdx = 0;
@@ -75,8 +72,6 @@ export default function Chat({ buildingSlug }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Keep ttsEnabled in both state (for rendering) and a ref (so speakText
-  // always reads the live value instead of a stale closure copy).
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const ttsEnabledRef = useRef(false);
   const setTts = (val: boolean) => {
@@ -87,13 +82,10 @@ export default function Chat({ buildingSlug }: Props) {
   const [speakingContent, setSpeakingContent] = useState<string | null>(null);
   const [wordIdx, setWordIdx] = useState(-1);
 
-  // Track which utterance is "live" so cancelled/ended old utterances
-  // can't clobber state that belongs to a newer utterance.
   const activeUtterance = useRef<SpeechSynthesisUtterance | null>(null);
   const isPausedRef = useRef(false);
   const blurbRef = useRef<string | null>(null);
 
-  // ── LocalStorage blurb watcher ──────────────────────────────────────────────
   useEffect(() => {
     const load = () => {
       const blurb = localStorage.getItem("pending_blurb");
@@ -108,40 +100,29 @@ export default function Chat({ buildingSlug }: Props) {
     return () => window.removeEventListener("storage", load);
   }, []);
 
-  // ── Auto-scroll ─────────────────────────────────────────────────────────────
   const bottomRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── TTS ─────────────────────────────────────────────────────────────────────
   const speakText = (text: string) => {
     if (!("speechSynthesis" in window)) return;
-
-    // Skip if audio is fully off and nothing is paused.
-    // But if something is paused, a new message overrides it.
     if (!ttsEnabledRef.current && !isPausedRef.current) return;
 
-    // Stamp what the "current" utterance will be.  Any stale onend/onerror
-    // callbacks that fire after cancel() will see they're no longer active
-    // and won't touch our state.
     const stamp = {};
     activeUtterance.current = stamp as any;
 
-    window.speechSynthesis.cancel();   // stops any playing/paused speech
+    window.speechSynthesis.cancel();
     isPausedRef.current = false;
 
-    // If audio was off because of a pause, restore it
     if (!ttsEnabledRef.current) setTts(true);
 
     setSpeakingContent(text);
     setWordIdx(-1);
 
-    // Use cleaned text for TTS so word indices match FormattedMessage's word count
     const speechText = cleanForSpeech(text);
     let count = 0;
     const utterance = new SpeechSynthesisUtterance(speechText);
-    // Use the stamp so callbacks can detect staleness
     (utterance as any).__stamp = stamp;
     activeUtterance.current = utterance;
 
@@ -150,21 +131,21 @@ export default function Chat({ buildingSlug }: Props) {
     utterance.volume = 1;
 
     utterance.onboundary = (e) => {
-      if (activeUtterance.current !== utterance) return;  // stale
+      if (activeUtterance.current !== utterance) return;
       if (e.name === "word") {
         setWordIdx(count);
         count++;
       }
     };
     utterance.onend = () => {
-      if (activeUtterance.current !== utterance) return;  // stale — ignore
+      if (activeUtterance.current !== utterance) return;
       isPausedRef.current = false;
       activeUtterance.current = null;
       setSpeakingContent(null);
       setWordIdx(-1);
     };
     utterance.onerror = () => {
-      if (activeUtterance.current !== utterance) return;  // stale — ignore
+      if (activeUtterance.current !== utterance) return;
       isPausedRef.current = false;
       activeUtterance.current = null;
       setSpeakingContent(null);
@@ -185,17 +166,14 @@ export default function Chat({ buildingSlug }: Props) {
     setTts(next);
 
     if (!next && speakingContent !== null) {
-      // Turning off while speaking → pause in place
       window.speechSynthesis.pause();
       isPausedRef.current = true;
     } else if (next && isPausedRef.current) {
-      // Turning back on while paused → resume
       window.speechSynthesis.resume();
       isPausedRef.current = false;
     }
   };
 
-  // ── Send message ─────────────────────────────────────────────────────────────
   const sendMessage = async () => {
     if (!input.trim()) return;
 
@@ -257,7 +235,6 @@ export default function Chat({ buildingSlug }: Props) {
     }
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="w-full bg-secondary/50 rounded-xl p-4 flex flex-col max-h-96">
       {/* Header */}
@@ -265,22 +242,22 @@ export default function Chat({ buildingSlug }: Props) {
         <h3 className="text-sm font-semibold text-foreground">Chat</h3>
         <button
           onClick={handleToggleTts}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
+          className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
             ttsEnabled
-              ? "bg-blue-600 text-white shadow-md"
-              : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+              ? "text-blue-600 border-blue-200 bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:bg-blue-950"
+              : "text-muted-foreground border-border bg-transparent hover:bg-secondary"
           }`}
           title={ttsEnabled ? "Text-to-speech enabled" : "Text-to-speech disabled"}
         >
           {ttsEnabled ? (
             <>
-              <Volume2 className="w-4 h-4" />
-              <span className="text-xs font-medium">Audio on</span>
+              <Volume2 className="w-3.5 h-3.5" />
+              <span>Audio on</span>
             </>
           ) : (
             <>
-              <VolumeX className="w-4 h-4" />
-              <span className="text-xs font-medium">Audio off</span>
+              <VolumeX className="w-3.5 h-3.5" />
+              <span>Audio off</span>
             </>
           )}
         </button>
@@ -296,29 +273,40 @@ export default function Chat({ buildingSlug }: Props) {
         {messages.map((msg, i) => {
           const isSpeaking = msg.role === "assistant" && msg.content === speakingContent;
           return (
-            <div
-              key={i}
-              className={`text-sm p-2 rounded ${
+            <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[80%] text-sm px-3 py-2 rounded-2xl leading-relaxed ${
                 msg.role === "user"
-                  ? "bg-blue-500 text-white self-end"
-                  : "bg-gray-200 text-black self-start"
-              }`}
-            >
-              <FormattedMessage
-                text={msg.content}
-                activeWordIdx={isSpeaking ? wordIdx : -1}
-              />
+                  ? "bg-blue-600 text-white rounded-br-sm"
+                  : "bg-secondary text-foreground rounded-bl-sm"
+              }`}>
+                <FormattedMessage
+                  text={msg.content}
+                  activeWordIdx={isSpeaking ? wordIdx : -1}
+                />
+              </div>
             </div>
           );
         })}
-        {loading && <div className="text-sm text-gray-400">Typing...</div>}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-secondary rounded-2xl rounded-bl-sm px-3 py-2 flex gap-1">
+              {[0, 1, 2].map((d) => (
+                <span
+                  key={d}
+                  className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce"
+                  style={{ animationDelay: `${d * 0.15}s` }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
       {/* Input */}
       <div className="flex gap-2">
         <input
-          className="flex-1 border rounded px-2 py-1 text-sm"
+          className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-blue-400 transition-colors"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask something..."
@@ -326,7 +314,7 @@ export default function Chat({ buildingSlug }: Props) {
         />
         <button
           onClick={sendMessage}
-          className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
         >
           Send
         </button>
